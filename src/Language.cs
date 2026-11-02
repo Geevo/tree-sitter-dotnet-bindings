@@ -6,7 +6,6 @@
 //
 
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 using static TreeSitter.Native;
@@ -25,8 +24,6 @@ public class Language : IDisposable, IEquatable<Language>, ICloneable
     /// <exception cref="ArgumentException">Thrown when <paramref name="self"/> is <see cref="IntPtr.Zero"/>.</exception>
     public Language(IntPtr self)
     {
-        PreloadTreesitterLibrary();
-
         if (self == IntPtr.Zero)
         {
             throw new ArgumentException("Pointer to the language object cannot be null.", nameof(self));
@@ -272,8 +269,6 @@ public class Language : IDisposable, IEquatable<Language>, ICloneable
         return Copy();
     }
 
-    delegate IntPtr LanguageFunction();
-
     static string GetLibraryNameFromId(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -299,11 +294,11 @@ public class Language : IDisposable, IEquatable<Language>, ICloneable
         };
     }
 
-    static IntPtr LoadLanguage(string library, string function)
+    static unsafe IntPtr LoadLanguage(string library, string function)
     {
-        var handle = NativeLibrary.Load(library, Assembly.GetExecutingAssembly(), null);
+        var handle = NativeLibraryResolver.Load(library);
         var pointer = NativeLibrary.GetExport(handle, function);
-        return Marshal.GetDelegateForFunctionPointer<LanguageFunction>(pointer)();
+        return ((delegate* unmanaged[Cdecl]<IntPtr>)pointer)();
     }
 
     /// <summary>

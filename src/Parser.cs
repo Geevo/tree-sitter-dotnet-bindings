@@ -5,6 +5,9 @@
 // https://github.com/mariusgreuel/tree-sitter-dotnet-bindings
 //
 
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
 using static TreeSitter.Native;
 
 namespace TreeSitter;
@@ -20,8 +23,6 @@ public class Parser : IDisposable, IEquatable<Parser>
     /// <exception cref="InvalidOperationException">Thrown when the parser cannot be created.</exception>
     public Parser()
     {
-        PreloadTreesitterLibrary();
-
         _self = ts_parser_new();
         if (_self == IntPtr.Zero)
         {
@@ -56,15 +57,47 @@ public class Parser : IDisposable, IEquatable<Parser>
         {
             _logger = value;
 
+            if (_loggerHandle.IsAllocated)
+            {
+                _loggerHandle.Free();
+            }
+
             if (_logger != null)
             {
-                var tsLogger = new TSLogger
-                {
-                    payload = IntPtr.Zero,
-                    log = (payload, logType, message) => _logger(logType, message)
-                };
-                ts_parser_set_logger(Self, tsLogger);
+                // Weak, so the native parser holding the pointer does not keep this object alive.
+                _loggerHandle = GCHandle.Alloc(this, GCHandleType.Weak);
+                SetNativeLogger(GCHandle.ToIntPtr(_loggerHandle));
             }
+            else
+            {
+                ts_parser_set_logger(Self, default);
+            }
+        }
+    }
+
+    unsafe void SetNativeLogger(IntPtr payload)
+    {
+        var tsLogger = new TSLogger
+        {
+            payload = payload,
+            log = &LogCallback
+        };
+        ts_parser_set_logger(Self, tsLogger);
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    static unsafe void LogCallback(IntPtr payload, LogType logType, byte* message)
+    {
+        try
+        {
+            if (GCHandle.FromIntPtr(payload).Target is Parser { _logger: { } logger })
+            {
+                logger(logType, Marshal.PtrToStringUTF8((IntPtr)message) ?? string.Empty);
+            }
+        }
+        catch
+        {
+            // An exception must not unwind into native code.
         }
     }
 
@@ -177,6 +210,11 @@ public class Parser : IDisposable, IEquatable<Parser>
         if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 0)
         {
             ts_parser_delete(_self);
+
+            if (_loggerHandle.IsAllocated)
+            {
+                _loggerHandle.Free();
+            }
         }
     }
 
@@ -201,4 +239,5 @@ public class Parser : IDisposable, IEquatable<Parser>
     readonly IntPtr _self;
     int _isDisposed;
     Logger? _logger;
+    GCHandle _loggerHandle;
 }
