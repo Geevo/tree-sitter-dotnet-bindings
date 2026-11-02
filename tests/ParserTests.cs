@@ -288,6 +288,21 @@ public class ParserTests
             tree.RootNode.Expression);
     }
 
+    [TestMethod]
+    public void Logger_ReceivesParserLogMessages()
+    {
+        var messages = new List<string>();
+        using var parser = new Parser(_javaScript);
+        parser.Logger = (logType, message) => messages.Add(message);
+        using var tree = parser.Parse("let a = 1;")!;
+        Assert.IsTrue(messages.Count > 0);
+
+        messages.Clear();
+        parser.Logger = null;
+        using var tree2 = parser.Parse("let b = 2;")!;
+        Assert.AreEqual(0, messages.Count);
+    }
+
     readonly Language _html = new("HTML");
     readonly Language _javaScript = new("JavaScript");
 }
