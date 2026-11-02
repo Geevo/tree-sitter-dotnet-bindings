@@ -8,7 +8,7 @@ Also includes the native tree-sitter parsing library and a complete set of nativ
 * .NET bindings for the tree-sitter parsing library.
 * Includes native libraries for the tree-sitter parsing library and language grammars.
 * Includes 28+ language grammars.
-* Work with all .NET languages such as C#, F#, and VB.NET.
+* Works with .NET languages such as C#, F#, and VB.NET (net11.0 and up).
 * Work with Windows (x86, x64, arm64), Linux (x86, x64, arm, arm64), and macOS (x64, arm64).
 * Support for [predicates queries](https://github.com/tree-sitter/tree-sitter/issues/4075).
 * Passes the [WebAssembly bindings](https://github.com/tree-sitter/tree-sitter/tree/master/lib/binding_web) test suite.
@@ -49,6 +49,37 @@ Expected output:
 Found function: one
 Found function: two
 ```
+
+## NativeAOT
+
+This fork targets `net11.0` only and is trimming and NativeAOT compatible (`IsAotCompatible`, warnings as errors).
+Changes compared to upstream:
+
+* Native imports use source generated `LibraryImport` instead of `DllImport`.
+* Language entry points are called through function pointers instead of `Marshal.GetDelegateForFunctionPointer`.
+* The parser log callback is an `[UnmanagedCallersOnly]` function pointer.
+* The custom native library loader is replaced by `System.Runtime.InteropServices.NativeLibrary`.
+  Libraries are looked up next to the app, then in `runtimes/<rid>/native`, then on the system search path.
+  Set `TREESITTER_DEBUG_LOADER=1` to print the probed paths.
+* `netstandard2.0` and .NET Framework are no longer supported.
+
+`examples/aot-smoke` parses a small sample with Go, Java, JavaScript, Kotlin, Python, Ruby, Rust, Swift, TypeScript and TSX,
+and runs a query on JavaScript and Python. Build the native libraries first, then:
+
+```bash
+cd examples/aot-smoke
+dotnet publish -c Release -r linux-x64
+./bin/Release/net11.0/linux-x64/publish/AotSmoke
+```
+
+## Added grammars
+
+Kotlin ([tree-sitter-kotlin-ng](https://github.com/tree-sitter-grammars/tree-sitter-kotlin), pinned to v1.1.0) and Swift
+were added to the native build and the `Makefile` language list.
+The Swift submodule now points at [alex-pinkus/tree-sitter-swift](https://github.com/alex-pinkus/tree-sitter-swift)
+(`0.7.4-with-generated-files`), because the previous `tree-sitter/tree-sitter-swift` is an archived ABI 10 grammar
+that tree-sitter 0.26 cannot load. Its own Makefile also compiles the `parser_abi*.c` copies, so the top level `Makefile`
+builds `parser.c` and `scanner.c` directly. The Windows projects for both are updated but have not been built.
 
 ## Installation
 
@@ -94,6 +125,7 @@ and the following projects:
 - [JSDoc grammar](https://github.com/tree-sitter/tree-sitter-jsdoc)
 - [JSON grammar](https://github.com/tree-sitter/tree-sitter-json)
 - [Julia grammar](https://github.com/tree-sitter/tree-sitter-julia)
+- [Kotlin grammar](https://github.com/tree-sitter-grammars/tree-sitter-kotlin)
 - [OCaml grammar](https://github.com/tree-sitter/tree-sitter-ocaml)
 - [PHP grammar](https://github.com/tree-sitter/tree-sitter-php)
 - [Python grammar](https://github.com/tree-sitter/tree-sitter-python)
@@ -103,7 +135,7 @@ and the following projects:
 - [Ruby grammar](https://github.com/tree-sitter/tree-sitter-ruby)
 - [Rust grammar](https://github.com/tree-sitter/tree-sitter-rust)
 - [Scala grammar](https://github.com/tree-sitter/tree-sitter-scala)
-- [Swift grammar](https://github.com/tree-sitter/tree-sitter-swift)
+- [Swift grammar](https://github.com/alex-pinkus/tree-sitter-swift)
 - [TOML grammar](https://github.com/tree-sitter/tree-sitter-toml)
 - [Tree-sitter query grammar](https://github.com/tree-sitter/tree-sitter-tsq)
 - [TypeScript grammar](https://github.com/tree-sitter/tree-sitter-typescript)
