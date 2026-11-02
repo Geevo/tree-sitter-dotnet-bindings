@@ -8,8 +8,8 @@ else
     make_lib = $(addsuffix .so,$1)
 endif
 
-# Missing Makefile for the languages swift, toml, tsq
-LANGUAGES = agda bash c cpp c-sharp css embedded-template go haskell html java javascript jsdoc json julia kotlin php python ql razor ruby rust scala typescript tsx verilog
+# Missing Makefile for the languages toml, tsq
+LANGUAGES = agda bash c cpp c-sharp css embedded-template go haskell html java javascript jsdoc json julia kotlin php python ql razor ruby rust scala swift typescript tsx verilog
 ifeq ($(UNAME_S),Linux)
     # ocaml is broken on macOS
     LANGUAGES += ocaml ocaml-type
@@ -42,6 +42,10 @@ $(BUILD_DIR)/$(call make_lib,libtree-sitter-typescript):
 $(BUILD_DIR)/$(call make_lib,libtree-sitter-tsx):
 	make -C tree-sitter-typescript
 	cp tree-sitter-typescript/tsx/$(call make_lib,libtree-sitter-tsx) $@
+
+# The swift Makefile also builds the parser_abi*.c copies, which clash with parser.c
+$(BUILD_DIR)/$(call make_lib,libtree-sitter-swift):
+	$(CC) -shared -fPIC -O2 -Itree-sitter-swift/src tree-sitter-swift/src/parser.c tree-sitter-swift/src/scanner.c -o $@
 
 $(BUILD_DIR)/$(call make_lib,lib%):
 	make -C $*
