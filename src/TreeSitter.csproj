@@ -37,7 +37,7 @@
     <None Include="..\build\runtimes\$(RuntimeIdentifier)\native\*" Condition="'$(RuntimeIdentifier)' != ''">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\build\runtimes\win-x64\native\*" Condition="'$(RuntimeIdentifier)' == '' And '$(OS)' == 'Windows_NT'">
+    <None Include="..\build\runtimes\$(NETCoreSdkPortableRuntimeIdentifier)\native\*" Condition="'$(RuntimeIdentifier)' == ''">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
